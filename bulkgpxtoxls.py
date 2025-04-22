@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import filedialog
+from tkinter import filedialog, messagebox
 import os
 import gpxpy
 from datetime import datetime
@@ -9,7 +9,13 @@ from openpyxl.utils import get_column_letter
 def process_gpx_file(file_path):
     skipped_files = []
     try:
-        gpx = gpxpy.parse(open(file_path, 'r'))
+        with open(file_path, 'r', encoding='utf-8-sig') as f:
+            first_char = f.read(1)
+            if first_char != '<':
+                raise ValueError("File doesn't start with an XML tag. Check for encoding issues.")
+            f.seek(0)  # Reset file pointer to beginning
+            gpx = gpxpy.parse(f)
+
         wb = Workbook()
         ws = wb.active
         ws.title = "GPX Data"
@@ -30,15 +36,18 @@ def process_gpx_file(file_path):
                         row += 1
                     except Exception as e:
                         print(f"Error processing point: {e}")
+
         output_folder = r"C:\Users\Usuario\Desktop\Geocode"
         if not os.path.exists(output_folder):
             os.makedirs(output_folder)
+
         output_file = os.path.join(output_folder, os.path.basename(file_path).replace(".gpx", ".xlsx"))
         wb.save(output_file)
         return skipped_files
+
     except Exception as e:
         skipped_files.append(file_path)
-        print(f"Error processing file: {e}")
+        print(f"Error processing file '{file_path}': {e}")
         return skipped_files
 
 def main():
@@ -54,8 +63,9 @@ def main():
         skipped_files_message = f"The following files were skipped due to errors:\n{skipped_files_message}"
     else:
         skipped_files_message = "All files processed successfully."
+
     completed_message = f"Process completed.\n{skipped_files_message}"
-    tk.messagebox.showinfo("Process Completed", completed_message)
+    messagebox.showinfo("Process Completed", completed_message)
 
 if __name__ == "__main__":
     main()
